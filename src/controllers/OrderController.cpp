@@ -44,7 +44,7 @@ void OrderController::createOrder(const drogon::HttpRequestPtr &req,
     if (!room) {
         nlohmann::json err;
         err["error"] = "room_not_found";
-        err["message"] = "Room tidak ditemukan atau sudah kedaluwarsa";
+        err["message"] = "Room not found or expired";
         auto resp = drogon::HttpResponse::newHttpResponse(drogon::k404NotFound, drogon::CT_APPLICATION_JSON);
         resp->setBody(err.dump());
         callback(resp);
@@ -56,7 +56,7 @@ void OrderController::createOrder(const drogon::HttpRequestPtr &req,
     if (deviceKey.empty() || !isAuthorized(deviceKey, roomId, room->hashedSecretKey)) {
         nlohmann::json err;
         err["error"] = "invalid_device_key";
-        err["message"] = "Secret key tidak valid untuk room ini";
+        err["message"] = "Invalid secret key for this room";
         auto resp = drogon::HttpResponse::newHttpResponse(drogon::k401Unauthorized, drogon::CT_APPLICATION_JSON);
         resp->setBody(err.dump());
         callback(resp);
@@ -69,7 +69,7 @@ void OrderController::createOrder(const drogon::HttpRequestPtr &req,
     } catch (const std::exception& e) {
         nlohmann::json err;
         err["error"] = "validation_error";
-        err["message"] = "JSON tidak valid";
+        err["message"] = "Invalid JSON structure";
         auto resp = drogon::HttpResponse::newHttpResponse(drogon::k400BadRequest, drogon::CT_APPLICATION_JSON);
         resp->setBody(err.dump());
         callback(resp);
@@ -79,7 +79,7 @@ void OrderController::createOrder(const drogon::HttpRequestPtr &req,
     if (!body.contains("tableNumber") || !body["tableNumber"].is_number_integer()) {
         nlohmann::json err;
         err["error"] = "validation_error";
-        err["message"] = "tableNumber wajib berupa integer";
+        err["message"] = "tableNumber must be an integer";
         auto resp = drogon::HttpResponse::newHttpResponse(drogon::k400BadRequest, drogon::CT_APPLICATION_JSON);
         resp->setBody(err.dump());
         callback(resp);
@@ -90,7 +90,7 @@ void OrderController::createOrder(const drogon::HttpRequestPtr &req,
     if (!body.contains("items") || !body["items"].is_array() || body["items"].empty()) {
         nlohmann::json err;
         err["error"] = "validation_error";
-        err["message"] = "items wajib berupa array dan tidak boleh kosong";
+        err["message"] = "items must be a non-empty array";
         auto resp = drogon::HttpResponse::newHttpResponse(drogon::k400BadRequest, drogon::CT_APPLICATION_JSON);
         resp->setBody(err.dump());
         callback(resp);
@@ -102,7 +102,7 @@ void OrderController::createOrder(const drogon::HttpRequestPtr &req,
         if (!item.contains("name") || !item["name"].is_string() || item["name"].get<std::string>().empty()) {
             nlohmann::json err;
             err["error"] = "validation_error";
-            err["message"] = "name item wajib berupa string non-kosong";
+            err["message"] = "item name must be a non-empty string";
             auto resp = drogon::HttpResponse::newHttpResponse(drogon::k400BadRequest, drogon::CT_APPLICATION_JSON);
             resp->setBody(err.dump());
             callback(resp);
@@ -111,7 +111,7 @@ void OrderController::createOrder(const drogon::HttpRequestPtr &req,
         if (!item.contains("quantity") || !item["quantity"].is_number_integer() || item["quantity"].get<int>() < 1) {
             nlohmann::json err;
             err["error"] = "validation_error";
-            err["message"] = "quantity item minimal bernilai 1";
+            err["message"] = "item quantity must be at least 1";
             auto resp = drogon::HttpResponse::newHttpResponse(drogon::k400BadRequest, drogon::CT_APPLICATION_JSON);
             resp->setBody(err.dump());
             callback(resp);
@@ -123,7 +123,7 @@ void OrderController::createOrder(const drogon::HttpRequestPtr &req,
             if (notes.length() > 200) {
                 nlohmann::json err;
                 err["error"] = "validation_error";
-                err["message"] = "notes item maksimal 200 karakter";
+                err["message"] = "item notes must be at most 200 characters";
                 auto resp = drogon::HttpResponse::newHttpResponse(drogon::k400BadRequest, drogon::CT_APPLICATION_JSON);
                 resp->setBody(err.dump());
                 callback(resp);
@@ -208,8 +208,20 @@ void OrderController::getOrders(const drogon::HttpRequestPtr &req,
     if (!room) {
         nlohmann::json err;
         err["error"] = "room_not_found";
-        err["message"] = "Room tidak ditemukan atau sudah kedaluwarsa";
+        err["message"] = "Room not found or expired";
         auto resp = drogon::HttpResponse::newHttpResponse(drogon::k404NotFound, drogon::CT_APPLICATION_JSON);
+        resp->setBody(err.dump());
+        callback(resp);
+        return;
+    }
+
+    // Authenticate device key
+    std::string deviceKey = req->getHeader("X-Device-Key");
+    if (deviceKey.empty() || !isAuthorized(deviceKey, roomId, room->hashedSecretKey)) {
+        nlohmann::json err;
+        err["error"] = "invalid_device_key";
+        err["message"] = "Invalid secret key for this room";
+        auto resp = drogon::HttpResponse::newHttpResponse(drogon::k401Unauthorized, drogon::CT_APPLICATION_JSON);
         resp->setBody(err.dump());
         callback(resp);
         return;
@@ -267,7 +279,7 @@ void OrderController::updateOrderStatus(const drogon::HttpRequestPtr &req,
     if (!room) {
         nlohmann::json err;
         err["error"] = "room_not_found";
-        err["message"] = "Room tidak ditemukan atau sudah kedaluwarsa";
+        err["message"] = "Room not found or expired";
         auto resp = drogon::HttpResponse::newHttpResponse(drogon::k404NotFound, drogon::CT_APPLICATION_JSON);
         resp->setBody(err.dump());
         callback(resp);
@@ -279,7 +291,7 @@ void OrderController::updateOrderStatus(const drogon::HttpRequestPtr &req,
     if (deviceKey.empty() || !isAuthorized(deviceKey, roomId, room->hashedSecretKey)) {
         nlohmann::json err;
         err["error"] = "invalid_device_key";
-        err["message"] = "Secret key tidak valid untuk room ini";
+        err["message"] = "Invalid secret key for this room";
         auto resp = drogon::HttpResponse::newHttpResponse(drogon::k401Unauthorized, drogon::CT_APPLICATION_JSON);
         resp->setBody(err.dump());
         callback(resp);
@@ -292,7 +304,7 @@ void OrderController::updateOrderStatus(const drogon::HttpRequestPtr &req,
     } catch (const std::exception& e) {
         nlohmann::json err;
         err["error"] = "validation_error";
-        err["message"] = "JSON tidak valid";
+        err["message"] = "Invalid JSON structure";
         auto resp = drogon::HttpResponse::newHttpResponse(drogon::k400BadRequest, drogon::CT_APPLICATION_JSON);
         resp->setBody(err.dump());
         callback(resp);
@@ -302,7 +314,7 @@ void OrderController::updateOrderStatus(const drogon::HttpRequestPtr &req,
     if (!body.contains("status") || !body["status"].is_string()) {
         nlohmann::json err;
         err["error"] = "validation_error";
-        err["message"] = "status wajib berupa string";
+        err["message"] = "status must be a string";
         auto resp = drogon::HttpResponse::newHttpResponse(drogon::k400BadRequest, drogon::CT_APPLICATION_JSON);
         resp->setBody(err.dump());
         callback(resp);
@@ -313,7 +325,7 @@ void OrderController::updateOrderStatus(const drogon::HttpRequestPtr &req,
     if (statusStr != "waiting" && statusStr != "cooking" && statusStr != "done") {
         nlohmann::json err;
         err["error"] = "validation_error";
-        err["message"] = "status harus berupa waiting, cooking, atau done";
+        err["message"] = "status must be waiting, cooking, or done";
         auto resp = drogon::HttpResponse::newHttpResponse(drogon::k400BadRequest, drogon::CT_APPLICATION_JSON);
         resp->setBody(err.dump());
         callback(resp);
@@ -337,7 +349,7 @@ void OrderController::updateOrderStatus(const drogon::HttpRequestPtr &req,
     if (!orderFound) {
         nlohmann::json err;
         err["error"] = "order_not_found";
-        err["message"] = "Order tidak ditemukan di room ini";
+        err["message"] = "Order not found in this room";
         auto resp = drogon::HttpResponse::newHttpResponse(drogon::k404NotFound, drogon::CT_APPLICATION_JSON);
         resp->setBody(err.dump());
         callback(resp);

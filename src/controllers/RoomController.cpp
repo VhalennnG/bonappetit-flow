@@ -40,7 +40,7 @@ void RoomController::createRoom(const drogon::HttpRequestPtr &req,
     } catch (const std::exception& e) {
         nlohmann::json err;
         err["error"] = "validation_error";
-        err["message"] = "JSON request tidak valid";
+        err["message"] = "Invalid JSON request";
         auto resp = drogon::HttpResponse::newHttpResponse(drogon::k400BadRequest, drogon::CT_APPLICATION_JSON);
         resp->setBody(err.dump());
         callback(resp);
@@ -50,7 +50,7 @@ void RoomController::createRoom(const drogon::HttpRequestPtr &req,
     if (!body.contains("secretKey") || !body["secretKey"].is_string()) {
         nlohmann::json err;
         err["error"] = "validation_error";
-        err["message"] = "secretKey wajib diisi";
+        err["message"] = "secretKey is required";
         auto resp = drogon::HttpResponse::newHttpResponse(drogon::k400BadRequest, drogon::CT_APPLICATION_JSON);
         resp->setBody(err.dump());
         callback(resp);
@@ -61,7 +61,7 @@ void RoomController::createRoom(const drogon::HttpRequestPtr &req,
     if (secretKey.length() < 6) {
         nlohmann::json err;
         err["error"] = "validation_error";
-        err["message"] = "secretKey minimal 6 karakter";
+        err["message"] = "secretKey must be at least 6 characters";
         auto resp = drogon::HttpResponse::newHttpResponse(drogon::k400BadRequest, drogon::CT_APPLICATION_JSON);
         resp->setBody(err.dump());
         callback(resp);
@@ -166,8 +166,25 @@ void RoomController::getRoom(const drogon::HttpRequestPtr &req,
     if (!room || isExpired) {
         nlohmann::json err;
         err["error"] = "room_not_found";
-        err["message"] = "Room tidak ditemukan";
+        err["message"] = "Room not found";
         auto resp = drogon::HttpResponse::newHttpResponse(drogon::k404NotFound, drogon::CT_APPLICATION_JSON);
+        resp->setBody(err.dump());
+        callback(resp);
+        return;
+    }
+
+    // Authenticate device key
+    std::string deviceKey = req->getHeader("X-Device-Key");
+    if (deviceKey.empty()) {
+        deviceKey = req->getParameter("secretKey");
+    }
+
+    std::string expectedHash = drogon::utils::getSha256(deviceKey + "_" + roomId);
+    if (room->hashedSecretKey != expectedHash) {
+        nlohmann::json err;
+        err["error"] = "invalid_device_key";
+        err["message"] = "Invalid secret key for this room";
+        auto resp = drogon::HttpResponse::newHttpResponse(drogon::k401Unauthorized, drogon::CT_APPLICATION_JSON);
         resp->setBody(err.dump());
         callback(resp);
         return;
